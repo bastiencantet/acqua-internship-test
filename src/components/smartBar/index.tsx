@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, useState } from 'react';
 import { MdOutlineWaterDrop } from 'react-icons/md';
+import { getSimilarity } from '@/tools/openai';
 
 interface SmartBarProps {
   setTodoItems: Dispatch<SetStateAction<string[]>>;
@@ -20,20 +21,36 @@ export default function SmartBar({
   const handleSend = () => {
     if (value === '') return;
 
-    const wantedItemInTodo = todoItems.find((item) => item === value);
-    const wantedItemInDone = doneItems.find((item) => item === value);
+    getSimilarity(todoItems, doneItems, value).then((response) => {
+      if (response === null) {
+        return;
+      }
+      const newItems = response
+        .replace(/[[\]]/g, '')
+        .split(',')
+        .map((item) => item.trim());
 
-    if (wantedItemInTodo) {
-      setDoneItems((prev) => [...prev, wantedItemInTodo]);
-      setTodoItems((prev) => prev.filter((item) => item !== wantedItemInTodo));
-    } else if (wantedItemInDone) {
-      setTodoItems((prev) => [...prev, wantedItemInDone]);
-      setDoneItems((prev) => prev.filter((item) => item !== wantedItemInDone));
-    } else {
-      setError(true);
-    }
+      newItems.forEach((newItem) => {
+        const wantedItemInTodo = todoItems.find((item) => item === newItem);
+        const wantedItemInDone = doneItems.find((item) => item === newItem);
 
-    setValue('');
+        if (wantedItemInTodo) {
+          setDoneItems((prev) => [...prev, wantedItemInTodo]);
+          setTodoItems((prev) =>
+            prev.filter((item) => item !== wantedItemInTodo),
+          );
+        } else if (wantedItemInDone) {
+          setTodoItems((prev) => [...prev, wantedItemInDone]);
+          setDoneItems((prev) =>
+            prev.filter((item) => item !== wantedItemInDone),
+          );
+        } else {
+          setError(true);
+        }
+
+        setValue('');
+      });
+    });
   };
 
   return (
